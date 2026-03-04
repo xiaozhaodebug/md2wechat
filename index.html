@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 转公众号格式工具</title>
+    <!-- Highlight.js for code highlighting -->
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/styles/atom-one-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        /* 品牌标识区域 */
+        .brand-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .brand-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .brand-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .brand-wechat {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.85);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .brand-wechat::before {
+            content: '💬';
+        }
+
+        /* 目录选择区域 */
+        .folder-selector {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .folder-selector label {
+            color: white;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .folder-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .folder-input-group input[type="text"] {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .folder-input-group button {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .folder-input-group button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .folder-status {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 13px;
+        }
+
+        .folder-status.success {
+            color: #7fff7f;
+        }
+
+        .main-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #markdown-input {
+            flex: 1;
+            width: 100%;
+            min-height: 550px;
+            border: none;
+            padding: 16px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+        }
+
+        #markdown-input::placeholder {
+            color: #aaa;
+        }
+
+        .preview-container {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 650px;
+        }
+
+        #preview {
+            padding: 20px;
+            min-height: 550px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(17, 153, 142, 0.4);
+        }
+
+        .image-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 10px 16px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .image-item {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .image-item .name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 9px;
+            padding: 2px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+            font-weight: 500;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            background: linear-gradient(135deg, #eb3349, #f45c43);
+        }
+
+        /* ====== 公众号文章样式 ====== */
+        #preview {
+            font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #3f3f3f;
+            word-wrap: break-word;
+        }
+
+        #preview h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a1a1a;
+            text-align: center;
+            margin: 30px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        #preview h2 {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin: 25px 0 15px;
+            padding-left: 12px;
+            border-left: 4px solid #667eea;
+        }
+
+        #preview h3 {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin: 20px 0 12px;
+        }
+
+        #preview h4,
+        #preview h5,
+        #preview h6 {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin: 15px 0 10px;
+        }
+
+        #preview p {
+            margin: 15px 0;
+            text-align: justify;
+        }
+
+        #preview strong {
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        #preview em {
+            font-style: italic;
+            color: #666;
+        }
+
+        #preview blockquote {
+            margin: 20px 0;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            border-left: 4px solid #667eea;
+            border-radius: 0 8px 8px 0;
+            color: #666;
+            font-style: italic;
+        }
+
+        #preview blockquote p {
+            margin: 8px 0;
+        }
+
+        #preview ul,
+        #preview ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+
+        #preview li {
+            margin: 8px 0;
+            line-height: 1.8;
+        }
+
+        #preview ul li {
+            list-style-type: disc;
+        }
+
+        #preview ul ul li {
+            list-style-type: circle;
+        }
+
+        #preview ol li {
+            list-style-type: decimal;
+        }
+
+        #preview code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            color: #e83e8c;
+        }
+
+        #preview pre {
+            margin: 20px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #preview pre code {
+            display: block;
+            padding: 16px;
+            background: #282c34;
+            color: #abb2bf;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+        }
+
+        #preview table {
+            width: 100%;
+            margin: 20px 0;
+            border-collapse: collapse;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        #preview th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        #preview td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        #preview tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        #preview tr:hover {
+            background: #f0f4ff;
+        }
+
+        #preview hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #667eea, transparent);
+            margin: 30px 0;
+        }
+
+        #preview img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 15px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #preview a {
+            color: #667eea;
+            text-decoration: none;
+            border-bottom: 1px dashed #667eea;
+        }
+
+        /* 首段特殊样式 - 作为导语 */
+        #preview>p:first-child {
+            font-size: 17px;
+            color: #555;
+            padding: 15px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf3 100%);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .main-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📝 Markdown 转公众号格式工具</h1>
+            <p>支持 Obsidian 格式 | 自动加载本地图片 | 一键复制到公众号</p>
+            <div class="brand-bar">
+                <svg class="brand-logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#667eea" />
+                            <stop offset="100%" style="stop-color:#764ba2" />
+                        </linearGradient>
+                    </defs>
+                    <rect width="100" height="100" rx="20" fill="white" />
+                    <polygon points="35,25 35,75 70,50" fill="#1a1a2e" />
+                </svg>
+                <div class="brand-info">
+                    <span class="brand-name"> 小昭debug</span>
+                    <span class="brand-wechat">vx:Debugzhao</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 目录选择区域 -->
+        <div class="folder-selector">
+            <label>📁 图片目录：</label>
+            <div class="folder-input-group">
+                <input type="file" id="folder-picker" webkitdirectory style="display: none;">
+                <input type="text" id="folder-path" placeholder="点击右侧按钮选择图片所在目录..." readonly>
+                <button onclick="document.getElementById('folder-picker').click()">选择目录</button>
+            </div>
+            <span class="folder-status" id="folder-status"></span>
+        </div>
+
+        <div class="main-panel">
+            <!-- 左侧编辑器 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>✏️ Markdown 编辑器</span>
+                    <span class="badge">支持 Obsidian 语法</span>
+                </div>
+                <div class="editor-container">
+                    <textarea id="markdown-input" placeholder="在这里粘贴你的 Markdown 内容...
+
+✨ 支持 Obsidian 格式：
+- 图片：![[image.png]] 或 ![](image.png)
+- 标题、列表、表格、代码块、引用等
+
+📌 使用步骤：
+1. 先选择图片所在的目录
+2. 粘贴 Markdown 内容
+3. 点击「一键复制到公众号」"></textarea>
+                </div>
+                <div class="image-list" id="image-list" style="display: none;"></div>
+                <div class="toolbar">
+                    <button class="btn btn-secondary" onclick="clearEditor()">🗑️ 清空</button>
+                    <button class="btn btn-secondary" onclick="loadFromFile()">📂 打开文件</button>
+                    <input type="file" id="file-picker" accept=".md,.markdown,.txt" style="display: none;">
+                </div>
+            </div>
+
+            <!-- 右侧预览 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>👁️ 公众号预览</span>
+                    <span class="badge">所见即所得</span>
+                </div>
+                <div class="preview-container">
+                    <div id="preview"></div>
+                </div>
+                <div class="toolbar">
+                    <button class="btn btn-success" onclick="copyToClipboard()">📋 一键复制到公众号</button>
+                    <button class="btn btn-primary" onclick="copyHTML()">🔗 复制 HTML</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 图片存储 (name -> base64)
+        const images = new Map();
+        let folderFiles = new Map();
+
+        function normalizeImageKey(value) {
+            if (!value) return '';
+            var cleaned = value.split('?')[0].split('#')[0];
+            cleaned = cleaned.replace(/\\/g, '/');
+            cleaned = cleaned.replace(/^\.\/+/, '');
+            cleaned = cleaned.replace(/^\/+/, '');
+            return cleaned;
+        }
+
+        function getImageBase64(src) {
+            if (!src) return null;
+            var candidates = [];
+            candidates.push(src);
+            candidates.push(normalizeImageKey(src));
+            try {
+                candidates.push(decodeURIComponent(src));
+            } catch (e) { }
+            var normalized = normalizeImageKey(src);
+            var basename = normalized.split('/').pop();
+            if (basename) candidates.push(basename);
+
+            for (var i = 0; i < candidates.length; i++) {
+                var key = normalizeImageKey(candidates[i]);
+                if (images.has(key)) return images.get(key);
+            }
+            return null;
+        }
+
+        // 等待 marked 加载完成
+        function initMarked() {
+            if (typeof marked === 'undefined') {
+                console.error('marked.js 未加载');
+                return;
+            }
+
+            // 配置 marked
+            marked.setOptions({
+                breaks: true,
+                gfm: true
+            });
+        }
+
+        // 预处理 Markdown - 处理 Obsidian 特殊语法
+        function preprocessMarkdown(markdown) {
+            // 1. 处理 Obsidian 图片语法 ![[image.png]] 或 ![[image.png|alt]]
+            markdown = markdown.replace(/!\[\[([^\]|]+)(?:\|([^\]]*))?\]\]/g, function (match, filename, alt) {
+                var altText = alt || filename;
+                var base64 = getImageBase64(filename);
+                if (base64) {
+                    return '<img src="' + base64 + '" alt="' + altText + '" style="max-width: 100%; display: block; margin: 15px auto;">';
+                }
+                return '![' + altText + '](' + filename + ')';
+            });
+
+            // 2. 处理 Obsidian 内部链接 [[link]]
+            markdown = markdown.replace(/\[\[([^\]|]+)(?:\|([^\]]*))?\]\]/g, function (match, link, display) {
+                return display || link;
+            });
+
+            return markdown;
+        }
+
+        // 更新预览
+        function updatePreview() {
+            var input = document.getElementById('markdown-input');
+            var preview = document.getElementById('preview');
+
+            if (!input || !preview) {
+                console.error('找不到输入或预览元素');
+                return;
+            }
+
+            var markdown = input.value;
+
+            if (!markdown.trim()) {
+                preview.innerHTML = '<p style="color: #999; text-align: center;">预览区域</p>';
+                return;
+            }
+
+            try {
+                // 预处理 Obsidian 格式
+                markdown = preprocessMarkdown(markdown);
+
+                // 使用 marked 解析
+                if (typeof marked !== 'undefined') {
+                    var html = marked.parse(markdown);
+                    preview.innerHTML = html;
+
+                    // 应用代码高亮
+                    if (typeof hljs !== 'undefined') {
+                        preview.querySelectorAll('pre code').forEach(function (block) {
+                            hljs.highlightElement(block);
+                        });
+                    }
+
+                    // 处理图片 - 替换本地图片路径为 base64
+                    preview.querySelectorAll('img').forEach(function (img) {
+                        var src = img.getAttribute('src');
+                        var base64 = getImageBase64(src);
+                        if (base64) {
+                            img.src = base64;
+                        }
+                    });
+                } else {
+                    preview.innerHTML = '<p style="color: red;">Markdown 解析器加载失败，请刷新页面重试</p>';
+                }
+            } catch (e) {
+                console.error('解析错误:', e);
+                preview.innerHTML = '<p style="color: red;">解析出错: ' + e.message + '</p>';
+            }
+        }
+
+        // 目录选择处理
+        document.getElementById('folder-picker').addEventListener('change', function (e) {
+            var files = e.target.files;
+            if (!files.length) return;
+
+            var firstFile = files[0];
+            var pathParts = firstFile.webkitRelativePath.split('/');
+            var folderName = pathParts[0];
+            document.getElementById('folder-path').value = folderName;
+
+            folderFiles.clear();
+            images.clear();
+            document.getElementById('image-list').innerHTML = '';
+
+            var imageCount = 0;
+            var imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg'];
+
+            for (var i = 0; i < files.length; i++) {
+                var file = files[i];
+                var fileName = file.name;
+                var ext = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+
+                if (imageExtensions.indexOf(ext) !== -1) {
+                    folderFiles.set(fileName, file);
+                    imageCount++;
+                    loadImageFile(file);
+                }
+            }
+
+            document.getElementById('folder-status').textContent = '✅ 已扫描 ' + imageCount + ' 张图片';
+            document.getElementById('folder-status').className = 'folder-status success';
+
+            if (imageCount > 0) {
+                document.getElementById('image-list').style.display = 'flex';
+            }
+
+            updatePreview();
+        });
+
+        // 加载单个图片文件
+        function loadImageFile(file) {
+            if (images.has(file.name)) return;
+
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var base64 = e.target.result;
+                var fileName = file.name;
+                var relativePath = file.webkitRelativePath || file.name;
+                images.set(normalizeImageKey(fileName), base64);
+                images.set(normalizeImageKey(relativePath), base64);
+
+                var item = document.createElement('div');
+                item.className = 'image-item';
+                item.innerHTML = '<img src="' + base64 + '" alt="' + fileName + '"><div class="name">' + fileName + '</div>';
+                document.getElementById('image-list').appendChild(item);
+
+                updatePreview();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 打开文件
+        document.getElementById('file-picker').addEventListener('change', function (e) {
+            var file = e.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('markdown-input').value = e.target.result;
+                updatePreview();
+                showToast('✅ 已加载: ' + file.name);
+            };
+            reader.readAsText(file);
+        });
+
+        function loadFromFile() {
+            document.getElementById('file-picker').click();
+        }
+
+        // 复制功能
+        function copyToClipboard() {
+            var preview = document.getElementById('preview');
+            var html = preview.innerHTML;
+
+            if (!html.trim() || html.indexOf('预览区域') !== -1) {
+                showToast('❌ 预览区域为空，请先输入内容', true);
+                return;
+            }
+
+            var container = document.createElement('div');
+            container.innerHTML = html;
+            inlineStyles(container);
+
+            try {
+                var blob = new Blob([container.innerHTML], { type: 'text/html' });
+                var clipboardItem = new ClipboardItem({
+                    'text/html': blob,
+                    'text/plain': new Blob([container.innerText], { type: 'text/plain' })
+                });
+
+                navigator.clipboard.write([clipboardItem]).then(function () {
+                    showToast('✅ 复制成功！可直接粘贴到公众号');
+                }).catch(function (err) {
+                    fallbackCopy(container.innerHTML);
+                });
+            } catch (err) {
+                fallbackCopy(container.innerHTML);
+            }
+        }
+
+        // 内联样式函数
+        function inlineStyles(element) {
+            var styles = {
+                'h1': 'font-size: 24px; font-weight: bold; color: #1a1a1a; text-align: center; margin: 30px 0 20px; padding-bottom: 10px; border-bottom: 2px solid #667eea;',
+                'h2': 'font-size: 20px; font-weight: bold; color: #1a1a1a; margin: 25px 0 15px; padding-left: 12px; border-left: 4px solid #667eea;',
+                'h3': 'font-size: 18px; font-weight: bold; color: #1a1a1a; margin: 20px 0 12px;',
+                'h4': 'font-size: 16px; font-weight: bold; color: #1a1a1a; margin: 15px 0 10px;',
+                'p': 'margin: 15px 0; text-align: justify; font-size: 16px; line-height: 1.8; color: #3f3f3f;',
+                'strong': 'color: #667eea; font-weight: bold;',
+                'em': 'font-style: italic; color: #666;',
+                'blockquote': 'margin: 20px 0; padding: 15px 20px; background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%); border-left: 4px solid #667eea; border-radius: 0 8px 8px 0; color: #666; font-style: italic;',
+                'ul': 'margin: 15px 0; padding-left: 25px;',
+                'ol': 'margin: 15px 0; padding-left: 25px;',
+                'li': 'margin: 8px 0; line-height: 1.8; font-size: 16px; color: #3f3f3f;',
+                'code': 'background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-family: Consolas, Monaco, monospace; font-size: 14px; color: #e83e8c;',
+                'pre': 'margin: 20px 0; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1);',
+                'table': 'width: 100%; margin: 20px 0; border-collapse: collapse; border-radius: 8px; overflow: hidden;',
+                'th': 'background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 15px; text-align: left; font-weight: 600;',
+                'td': 'padding: 12px 15px; border-bottom: 1px solid #eee;',
+                'hr': 'border: none; height: 1px; background: linear-gradient(90deg, transparent, #667eea, transparent); margin: 30px 0;',
+                'img': 'max-width: 100%; height: auto; border-radius: 8px; margin: 15px auto; display: block;',
+                'a': 'color: #667eea; text-decoration: none;'
+            };
+
+            for (var tag in styles) {
+                var elements = element.querySelectorAll(tag);
+                for (var i = 0; i < elements.length; i++) {
+                    elements[i].style.cssText = styles[tag];
+                }
+            }
+
+            var preCodes = element.querySelectorAll('pre code');
+            for (var i = 0; i < preCodes.length; i++) {
+                preCodes[i].style.cssText = 'display: block; padding: 16px; background: #282c34; color: #abb2bf; font-size: 13px; line-height: 1.6; overflow-x: auto; font-family: Consolas, Monaco, monospace;';
+            }
+
+            var evenRows = element.querySelectorAll('tr:nth-child(even)');
+            for (var i = 0; i < evenRows.length; i++) {
+                evenRows[i].style.background = '#f8f9fa';
+            }
+        }
+
+        function fallbackCopy(html) {
+            var temp = document.createElement('div');
+            temp.innerHTML = html;
+            temp.style.position = 'fixed';
+            temp.style.left = '-9999px';
+            document.body.appendChild(temp);
+
+            var range = document.createRange();
+            range.selectNodeContents(temp);
+
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            try {
+                document.execCommand('copy');
+                showToast('✅ 复制成功！可直接粘贴到公众号');
+            } catch (err) {
+                showToast('❌ 复制失败，请手动选择复制', true);
+            }
+
+            selection.removeAllRanges();
+            document.body.removeChild(temp);
+        }
+
+        function copyHTML() {
+            var preview = document.getElementById('preview');
+            navigator.clipboard.writeText(preview.innerHTML).then(function () {
+                showToast('✅ HTML 代码已复制！');
+            });
+        }
+
+        function showToast(message, isError) {
+            var toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(function () { toast.classList.remove('show'); }, 3000);
+        }
+
+        function clearEditor() {
+            document.getElementById('markdown-input').value = '';
+            document.getElementById('preview').innerHTML = '<p style="color: #999; text-align: center;">预览区域</p>';
+        }
+
+        // 监听输入
+        document.getElementById('markdown-input').addEventListener('input', updatePreview);
+
+        // 初始化
+        window.onload = function () {
+            initMarked();
+            updatePreview();
+        };
+    </script>
+</body>
+
+</html>
