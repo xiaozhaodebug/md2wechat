@@ -34,7 +34,7 @@
 
 直接访问 GitHub Pages 在线版本：
 
-👉 **[点击使用](https://你的用户名.github.io/md2wechat/)**
+👉 **[点击使用](https://xiaozhaodebug.github.io/md2wechat/)**
 
 ### 方式二：本地使用
 
@@ -42,7 +42,7 @@
 2. 双击打开即可使用
 
 ```bash
-git clone https://github.com/你的用户名/md2wechat.git
+git clone https://github.com/xiaozhaodebug/md2wechat.git
 cd md2wechat
 open index.html
 ```
@@ -111,8 +111,8 @@ open index.html
 
 如果你有任何问题或建议，欢迎通过以下方式联系：
 
-- 提交 [Issue](https://github.com/你的用户名/md2wechat/issues)
-- 发送邮件到 your.email@example.com
+- 提交 [Issue](https://github.com/xiaozhaodebug/md2wechat/issues)
+- 关注公众号：小昭debug
 
 ---
 
